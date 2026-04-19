@@ -468,8 +468,6 @@ videos list from an external source. For this we will need to add the following 
   For making the fetch call.
 - [`serde`](https://serde.rs) with derive features
   For de-serializing the JSON response
-- [`wasm-bindgen-futures`](https://crates.io/crates/wasm-bindgen-futures)
-  For executing Rust Future as a Promise
 
 Let's update the dependencies in `Cargo.toml` file:
 
@@ -505,10 +503,7 @@ struct Video {
 }
 ```
 
-Now we need to update our `App` component to fetch data. The modern yew way to do this is with
-
-[`use_future`](https://docs.rs/yew/0.23.0/yew/suspense/fn.use_future.html) and
-[`<Suspense>`](https://yew.rs/docs/concepts/suspense).
+Now we need to update our `App` component to fetch data. The modern yew way to do this is with [`use_future`](https://docs.rs/yew/0.23.0/yew/suspense/fn.use_future.html) and [`<Suspense>`](https://yew.rs/docs/concepts/suspense).
 
 Alternatively, you can use [`yew::platform::spawn_local`](https://docs.rs/yew/latest/yew/platform/fn.spawn_local.html)
 if hooks are unavailable, such as within struct components or standard functions.
@@ -519,7 +514,7 @@ fallback UI (e.g. a loading indicator) in the meantime.
 We split the data fetching logic into a child component (`VideosFetcher`) that returns `HtmlResult`,
 while the parent `App` wraps it in `<Suspense>`:
 
-```rust {3-4}
+```rust {3-4,6-10,12-43}
 use yew::prelude::*;
 use serde::Deserialize;
 +use gloo_net::http::Request;
@@ -539,7 +534,7 @@ use serde::Deserialize;
 +    }: &VideosFetchProps,
 +) -> HtmlResult {
 +    let videos = use_future(|| async {
-+        Request::get("/tutorial/data.json")
++        Request::get("https://yew.rs/tutorial/data.json")
 +            .send()
 +            .await?
 +            .json::<Vec<Video>>()
@@ -625,6 +620,24 @@ instead of `Html` when using suspense hooks. The parent wraps it in `<Suspense f
 a loading indicator while the data is being fetched.
 :::
 
+Now, look at the browser to see everything working as expected... which would have been the case if it were not for CORS.
+To fix that, we need a proxy server. Luckily trunk provides that.
+
+Update the following line:
+
+```rust {2-3}
+-               let videos: Vec<Video> = Request::get("https://yew.rs/tutorial/data.json")
++               let videos: Vec<Video> = Request::get("/tutorial/data.json")
+```
+
+Now, rerun the server with the following command:
+
+```bash
+trunk serve --proxy-backend=https://yew.rs/tutorial
+```
+
+Refresh the tab and everything should work as expected.
+
 The loading text may not be visible because the data loads very quickly. If you'd like to see it, you can add an
 artificial delay inside the `use_future` hook using `TimeoutFuture`. First, add `gloo-timers` to your `Cargo.toml`:
 
@@ -645,24 +658,6 @@ let videos = use_future(|| async {
         .await
 })?;
 ```
-
-Now, look at the browser to see everything working as expected... which would have been the case if it were not for CORS.
-To fix that, we need a proxy server. Luckily trunk provides that.
-
-Update the following line:
-
-```rust {2-3}
--               let fetched_videos: Vec<Video> = Request::get("https://yew.rs/tutorial/data.json")
-+               let fetched_videos: Vec<Video> = Request::get("/tutorial/data.json")
-```
-
-Now, rerun the server with the following command:
-
-```bash
-trunk serve --proxy-backend=https://yew.rs/tutorial
-```
-
-Refresh the tab and everything should work as expected.
 
 ## Wrapping up
 
