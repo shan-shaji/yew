@@ -487,7 +487,7 @@ use yew::prelude::*;
 
 Update the `Video` struct to derive the `Deserialize` trait:
 
-```rust {2,4-5}
+```rust {2}
 -#[derive(Clone, PartialEq)]
 +#[derive(Clone, PartialEq, Deserialize)]
 struct Video {
@@ -506,9 +506,6 @@ if hooks are unavailable, such as within struct components or standard functions
 `use_future` suspends the component until the async operation completes, and `<Suspense>` shows a
 fallback UI (e.g. a loading indicator) in the meantime.
 
-We split the data fetching logic into a child component (`VideosFetcher`) that returns `HtmlResult`,
-while the parent `App` wraps it in `<Suspense>`:
-
 Update the imports:
 
 ```rust {3-4}
@@ -518,7 +515,10 @@ use serde::Deserialize;
 +use yew::suspense::use_future;
 ```
 
-```rust {3-4,6-10,12-43}
+We split the data fetching logic into a child component (`VideosFetcher`) that returns `HtmlResult`,
+while the parent `App` wraps it in `<Suspense>`:
+
+```rust {2-6,7-39}
 use yew::suspense::use_future;
 +#[derive(Properties, PartialEq)]
 +struct VideosFetchProps {
@@ -562,7 +562,7 @@ use yew::suspense::use_future;
 
 Now we will use the new component inside the App component.
 
-```rust {4-30,37-46}
+```rust {3-30,37-46}
 #[component]
 fn App() -> Html {
 -   let videos = vec![
@@ -625,7 +625,7 @@ To fix that, we need a proxy server. Luckily trunk provides that.
 
 Update the following line:
 
-```rust {2-3}
+```rust {1-2}
 -       Request::get("https://yew.rs/tutorial/data.json")
 +       Request::get("/tutorial/data.json")
 ```
@@ -646,7 +646,7 @@ gloo-timers = { version = "0.3", features = ["futures"] }
 ```
 Then add the delay inside the hook:
 
-```ignore
+```
 let videos = use_future(|| async {
 +   gloo_timers::future::TimeoutFuture::new(3_000).await; // 3 second delay
     Request::get("/tutorial/data.json")
