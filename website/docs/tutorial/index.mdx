@@ -478,12 +478,16 @@ When choosing dependencies make sure they are `wasm32` compatible!
 Otherwise you won't be able to run your application.
 :::
 
+Update the imports:
+
+```rust {2}
+use yew::prelude::*;
++use serde::Deserialize;
+```
+
 Update the `Video` struct to derive the `Deserialize` trait:
 
 ```rust {2,4-5}
-use yew::prelude::*;
-+use serde::Deserialize;
-// ...
 -#[derive(Clone, PartialEq)]
 +#[derive(Clone, PartialEq, Deserialize)]
 struct Video {
@@ -505,12 +509,17 @@ fallback UI (e.g. a loading indicator) in the meantime.
 We split the data fetching logic into a child component (`VideosFetcher`) that returns `HtmlResult`,
 while the parent `App` wraps it in `<Suspense>`:
 
-```rust {3-4,6-10,12-43}
+Update the imports:
+
+```rust {3-4}
 use yew::prelude::*;
 use serde::Deserialize;
 +use gloo_net::http::Request;
 +use yew::suspense::use_future;
-// ..
+```
+
+```rust {3-4,6-10,12-43}
+use yew::suspense::use_future;
 +#[derive(Properties, PartialEq)]
 +struct VideosFetchProps {
 +    on_click: Callback<Video>,
@@ -551,10 +560,9 @@ use serde::Deserialize;
 +}
 ```
 
-Now we will use the new component inside the App component. 
+Now we will use the new component inside the App component.
 
 ```rust {4-30,37-46}
-// ..
 #[component]
 fn App() -> Html {
 -   let videos = vec![
@@ -588,19 +596,20 @@ fn App() -> Html {
     // ...
 
     html! {
-        <>
-            <h1>{ "RustConf Explorer" }</h1>
--            <div>
--               <h3>{ "Videos to watch" }</h3>
--               <VideosList {videos} on_click={on_video_select} />
--            </div>
-+            <Suspense fallback={html! {<p> {"Loading..."} </p>}} >
-+               <VideosFetcher
-+                        on_click={on_video_select}
-+                        selected_video={(*selected_video).clone()}
-+                    />
-+             </Suspense>                 
-        </>
+-       <h1>{ "RustConf Explorer" }</h1>
+-       <div>
+-           <h3>{ "Videos to watch" }</h3>
+-           <VideosList {videos} on_click={on_video_select} />
+-       </div>
++       <>
++           <h1>{ "RustConf Explorer" }</h1>
++           <Suspense fallback={html! {<p> {"Loading..."} </p>}} >
++              <VideosFetcher
++                       on_click={on_video_select}
++                       selected_video={(*selected_video).clone()}
++                   />
++            </Suspense>
++       </>
     }
 }
 ```
@@ -617,8 +626,8 @@ To fix that, we need a proxy server. Luckily trunk provides that.
 Update the following line:
 
 ```rust {2-3}
--               let videos: Vec<Video> = Request::get("https://yew.rs/tutorial/data.json")
-+               let videos: Vec<Video> = Request::get("/tutorial/data.json")
+-       Request::get("https://yew.rs/tutorial/data.json")
++       Request::get("/tutorial/data.json")
 ```
 
 Now, rerun the server with the following command:
@@ -637,11 +646,9 @@ gloo-timers = { version = "0.3", features = ["futures"] }
 ```
 Then add the delay inside the hook:
 
-```rust
-use gloo_timers::future::TimeoutFuture;
-
+```ignore
 let videos = use_future(|| async {
-+   TimeoutFuture::new(3_000).await; // 3 second delay
++   gloo_timers::future::TimeoutFuture::new(3_000).await; // 3 second delay
     Request::get("/tutorial/data.json")
         .send()
         .await?
