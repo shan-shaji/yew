@@ -496,7 +496,7 @@ use yew::prelude::*;
 
 Update the `Video` struct to derive the `Deserialize` trait:
 
-```rust {2}
+```rust {1-2}
 -#[derive(Clone, PartialEq)]
 +#[derive(Clone, PartialEq, Deserialize)]
 struct Video {
@@ -527,7 +527,7 @@ use serde::Deserialize;
 We split the data fetching logic into a child component (`VideosFetcher`) that returns `HtmlResult`,
 while the parent `App` wraps it in `<Suspense>`:
 
-```rust {2-6,7-39}
+```rust {2-6,8-39}
 use yew::suspense::use_future;
 +#[derive(Properties, PartialEq)]
 +struct VideosFetchProps {
@@ -571,7 +571,7 @@ use yew::suspense::use_future;
 
 Now we will use the new component inside the App component.
 
-```rust {3-30,37-46}
+```rust {3-28,33-47}
 #[component]
 fn App() -> Html {
 -   let videos = vec![
@@ -601,7 +601,6 @@ fn App() -> Html {
 -       },
 -   ];
 -
-
     // ...
 
     html! {
@@ -610,15 +609,16 @@ fn App() -> Html {
 -           <h3>{ "Videos to watch" }</h3>
 -           <VideosList {videos} on_click={on_video_select} />
 -       </div>
-+       <>
-+           <h1>{ "RustConf Explorer" }</h1>
-+           <Suspense fallback={html! {<p> {"Loading..."} </p>}} >
-+              <VideosFetcher
-+                       on_click={on_video_select}
-+                       selected_video={(*selected_video).clone()}
-+                   />
-+            </Suspense>
-+       </>
+-       if let Some(video) = &*selected_video {
+-           <VideoDetails video={video.clone()} />
+-       }
++       <h1>{ "RustConf Explorer" }</h1>
++       <Suspense fallback={html! {<p> {"Loading..."} </p>}} >
++           <VideosFetcher
++                   on_click={on_video_select}
++                   selected_video={(*selected_video).clone()}
++               />
++       </Suspense>
     }
 }
 ```
